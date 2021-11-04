@@ -5,7 +5,7 @@
 
 # GoDumpLsass
 
-------
+
 GoDumpLsass is a simple tool that can dump lsass without to get caught by Windows Defender.
 ## Releases
 
