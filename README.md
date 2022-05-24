@@ -14,17 +14,15 @@ https://github.com/Enelg52/GoDumpLsass/releases
 ## Usage
 
 ```txt
-.\GoDumpLsass.exe -p [path]
+.\GoDumpLsass.exe
 ```
 
 ## Example
 ```txt
-.\GoDumpLsass.exe -p "C:\Users\enelg\Downloads\"
-[-] Get lsass process id
-[+] Lsass pid : 908
-[-] Dump process
-[+] Process dumped
-[+] The dump is under C:\Users\enelg\Downloads\lsass.dmp
+.\GoDumpLsass.exe
+[*] Get process id
+[*] Open lsass handle
+[*] Dump lsass
 ```
 
 ## Contributing
