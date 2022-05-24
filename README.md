@@ -1,8 +1,3 @@
-<p align="center">
-  <a href="" rel="noopener">
- <img width=200px height=200px src="https://cdn-icons.flaticon.com/png/512/3065/premium/3065741.png?token=exp=1636056750~hmac=b65861715a05bdc78a609f295ff99b01"> </a>
-</p>
-
 # GoDumpLsass
 
 
